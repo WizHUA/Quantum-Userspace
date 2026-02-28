@@ -1,36 +1,53 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "libquantum.h"
 
-int main(void)
+static void usage(void)
+{
+    fprintf(stderr,
+            "Usage: qresource\n"
+            "       qresource --json\n"
+            "\n"
+            "  查询量子后端资源信息\n"
+            "\n"
+            "Options:\n"
+            "  --json   JSON格式输出\n"
+            "  -h       帮助\n");
+}
+
+int main(int argc, char *argv[])
 {
     qos_backend_pool_t *pool;
-    int i, ret;
+    int opt_json = 0;
+    int ret, i;
+
+    for (i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-h") == 0) { usage(); return 0; }
+        if (strcmp(argv[i], "--json") == 0) opt_json = 1;
+    }
 
     pool = calloc(1, sizeof(*pool));
     if (!pool) return 1;
 
     ret = qos_resource(pool);
-    if (ret != QERR_OK) {
-        fprintf(stderr, "qresource: query failed (err=%d)\n", ret);
+    if (ret != QOS_OK) {
+        fprintf(stderr, "qresource: query failed: %s\n", qos_err_str(ret));
         free(pool);
         return 1;
     }
 
-    printf("QuantumOS backend pool  (%d backends)\n",
-           pool->num_backends);
-    printf("──────────────────────────────────────────\n");
-    printf("%-8s  %-6s  %-12s  %-10s\n",
-           "name", "qubits", "state", "current_qid");
-    printf("──────────────────────────────────────────\n");
-
-    for (i = 0; i < pool->num_backends; i++) {
-        qos_backend_t *b = &pool->backends[i];
-        printf("%-8s  %-6d  %-12s  %d\n",
-               b->name,
-               b->total_qubits,
-               qos_backend_state_str(b->state),
-               b->current_qid);
+    if (opt_json) {
+        char *buf = malloc(8192);
+        if (buf) {
+            int n = qos_backend_pool_to_json(pool, buf, 8192);
+            if (n > 0) printf("%s", buf);
+            else fprintf(stderr, "qresource: JSON serialization failed\n");
+            free(buf);
+        }
+    } else {
+        qos_backend_pool_print(pool);
     }
 
     free(pool);
