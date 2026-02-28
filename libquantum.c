@@ -19,7 +19,7 @@ struct kern_result {
     int  qid;
     int  shots;
     int  num_outcomes;
-    char keys[QUANTUM_MAX_OUTCOMES][96];
+    char keys[QUANTUM_MAX_OUTCOMES][192];
     int  counts[QUANTUM_MAX_OUTCOMES];
     int  error_code;
     char error_info[128];

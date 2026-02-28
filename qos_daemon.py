@@ -24,7 +24,7 @@ from qiskit_aer import AerSimulator
 QUANTUM_DEV_PATH     = "/dev/quantum"
 QUANTUM_QIR_SIZE     = 4096
 QUANTUM_MAX_OUTCOMES = 32      # 与内核保持一致，勿改
-QUANTUM_KEY_LEN      = 96
+QUANTUM_KEY_LEN      = 192
 
 QIOC_MAGIC  = ord('Q')
 QIOC_FETCH  = (QIOC_MAGIC << 8) | 6
@@ -63,14 +63,14 @@ class QuantumFetchReq(ctypes.Structure):
 class QuantumCommitReq(ctypes.Structure):
     """
     对应 struct quantum_commit_req（quantum_types.h）
-    sizeof = 1308 bytes
+    sizeof = 6428 bytes
     """
     _fields_ = [
         ("qid",          ctypes.c_int),
         ("success",      ctypes.c_int),
         ("shots",        ctypes.c_int),
         ("num_outcomes", ctypes.c_int),
-        ("keys",         (ctypes.c_char * QUANTUM_KEY_LEN) * QUANTUM_MAX_OUTCOMES),  # 32*32=1024
+        ("keys",         (ctypes.c_char * QUANTUM_KEY_LEN) * QUANTUM_MAX_OUTCOMES),  # 32*192=6144
         ("counts",       ctypes.c_int * QUANTUM_MAX_OUTCOMES),          # 32*4=128
         ("error_code",   ctypes.c_int),
         ("error_info",   ctypes.c_char * 128),
@@ -87,7 +87,7 @@ def verify_struct_sizes():
     """
     expected = {
         "QuantumFetchReq":  4128,
-        "QuantumCommitReq": 3356,
+        "QuantumCommitReq": 6428,
     }
     ok = True
     for name, size in expected.items():
@@ -130,15 +130,36 @@ def ioctl_commit(fd, commit):
 
 _simulator = AerSimulator()
 
-def run_circuit(qasm, shots):
-    qc = qasm2_loads(qasm)
-    if not any(isinstance(inst.operation,
-               __import__('qiskit.circuit', fromlist=['Measure']).Measure)
-               for inst in qc.data):
+def run_circuit(qasm_str, shots):
+    # 过滤非标准行（内核可能在 qasm 头部注入 shots/priority 等元信息）
+    skip_keywords = ("shots", "priority", "backend_hint")
+    filtered = []
+    for line in qasm_str.splitlines():
+        s = line.strip()
+        if not s or s.startswith("//"):
+            continue
+        if any(s.startswith(kw) for kw in skip_keywords):
+            log.debug("run_circuit: skip non-standard line: %s", s)
+            continue
+        filtered.append(line)
+
+    clean_qasm = "\n".join(filtered)
+    log.debug("run_circuit: clean_qasm=\n%s", clean_qasm)
+
+    try:
+        qc = qasm2_loads(clean_qasm)
+    except Exception as e:
+        raise RuntimeError(f"QASM parse error: {e}") from e
+
+    # 没有 measure 指令时自动补全
+    from qiskit.circuit import Measure
+    if not any(isinstance(inst.operation, Measure) for inst in qc.data):
         qc.measure_all()
+
     job    = _simulator.run(qc, shots=shots)
     result = job.result()
-    return result.get_counts()
+    counts = result.get_counts()
+    return counts
 
 def execute_task(req):
     commit       = QuantumCommitReq()

@@ -7,7 +7,7 @@
 #define QUANTUM_DEV_PATH        "/dev/quantum"
 #define QUANTUM_MAX_BACKENDS    8
 #define QUANTUM_MAX_OUTCOMES    32
-#define QUANTUM_KEY_LEN         96
+#define QUANTUM_KEY_LEN         192
 
 /* ===== 任务状态码 ===== */
 #define QTASK_STATE_UNKNOWN     0
