@@ -1,0 +1,6 @@
+*.o
+qrun
+qstat
+qresult
+qresource
+qcancel
