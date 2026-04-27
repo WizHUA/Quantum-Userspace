@@ -15,7 +15,7 @@
 #define QOS_MAX_QUBITS          64
 #define QOS_MAX_TASKS           256
 #define QOS_QIR_SIZE            4096
-#define QOS_MAX_OUTCOMES        32
+#define QOS_MAX_OUTCOMES        64  /* must match kernel QUANTUM_MAX_OUTCOMES (v3) */
 #define QOS_KEY_LEN             192
 #define QOS_MAX_BACKENDS        8
 #define QOS_MAX_SUB_CIRCUITS    8

@@ -33,7 +33,7 @@ from qiskit_aer import AerSimulator
 QUANTUM_DEV_PATH      = "/dev/quantum"
 QUANTUM_QIR_SIZE      = 4096
 QUANTUM_MAX_QUBITS    = 64
-QUANTUM_MAX_OUTCOMES  = 32
+QUANTUM_MAX_OUTCOMES  = 64  # ABI v3: must match kernel QUANTUM_MAX_OUTCOMES
 QUANTUM_KEY_LEN       = 192
 
 # ioctl 命令字：_IO('Q', N) = (ord('Q') << 8) | N
@@ -100,9 +100,9 @@ class QuantumCommitReq(ctypes.Structure):
 
 # 期望值（根据内核实际 sizeof 计算）：
 #   QuantumFetchReq：5*4 + 4096 + 3*4 + 64*4 = 20 + 4096 + 12 + 256 = 4384
-#   QuantumCommitReq：4*4 + 32*192 + 32*4 + 4 + 128 + 2*4 = 16+6144+128+4+128+8 = 6428
+#   QuantumCommitReq：4*4 + 64*192 + 64*4 + 4 + 128 + 2*4 = 16+12288+256+4+128+8 = 12700
 EXPECTED_FETCH_SIZE  = 4384
-EXPECTED_COMMIT_SIZE = 6428
+EXPECTED_COMMIT_SIZE = 12700
 
 def verify_struct_sizes():
     """
